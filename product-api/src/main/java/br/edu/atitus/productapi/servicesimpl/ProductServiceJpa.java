@@ -15,9 +15,13 @@ import org.springframework.stereotype.Service;
 public class ProductServiceJpa implements ProductService {
 
     private final ProductRepository repository;
+    private final CurrencyClientService currencyClientService;
 
-    public ProductServiceJpa(ProductRepository repository) {
+    public ProductServiceJpa(
+            ProductRepository repository,
+            CurrencyClientService currencyClientService) {
         this.repository = repository;
+        this.currencyClientService = currencyClientService;
     }
 
     @Value("${server.port:8080}")
@@ -26,35 +30,62 @@ public class ProductServiceJpa implements ProductService {
     @Value("${app.promotion.message:Nenhuma Promoção Ativa}")
     private String promotionMessage;
 
-
     @Override
     public ProductResponse findById(Long id, String targetCurrency) throws Exception {
-        var product = repository.findById(id)
+        var entity = repository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
         String environment = "Product API running in port " + serverPort;
+
+        double convertedValue;
+        try {
+            var currency = currencyClientService.getCurrency(
+                    entity.getCurrency(),
+                    targetCurrency
+            );
+            convertedValue = entity.getPrice() * currency.conversionRate();
+            environment += " - " + currency.environment();
+        } catch (Exception e) {
+            convertedValue = -1;
+            environment += " - ERROR: " + e.getMessage();
+        }
+
         return ProductResponse.fromEntity(
-                product,
+                entity,
                 environment,
                 promotionMessage,
                 targetCurrency,
-                0
+                convertedValue
         );
     }
 
     @Override
     public Page<ProductResponse> findAll(Pageable pageable, String targetCurrency) throws Exception {
         var products = repository.findAll(pageable);
-        String environment = "Product API running in port " + serverPort;
+        String baseEnvironment = "Product API running in port " + serverPort;
 
-        return products.map(
-                entity -> ProductResponse.fromEntity(
-                        entity,
-                        environment,
-                        promotionMessage,
-                        targetCurrency,
-                        0
-                )
-        );
+        return products.map(entity -> {
+            String environment = baseEnvironment;
+            double convertedValue;
+            try {
+                var currency = currencyClientService.getCurrency(
+                        entity.getCurrency(),
+                        targetCurrency
+                );
+                convertedValue = entity.getPrice() * currency.conversionRate();
+                environment += " - " + currency.environment();
+            } catch (Exception e) {
+                convertedValue = -1;
+                environment += " - ERROR: " + e.getMessage();
+            }
+
+            return ProductResponse.fromEntity(
+                    entity,
+                    environment,
+                    promotionMessage,
+                    targetCurrency,
+                    convertedValue
+            );
+        });
     }
 
     @Override

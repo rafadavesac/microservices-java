@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("currencies")
 public class CurrencyController {
     private final CurrencyService service;
-
     public CurrencyController(@Qualifier("currencyServiceJpa") CurrencyService service) {
         this.service = service;
     }
