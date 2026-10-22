@@ -74,6 +74,12 @@ REM Ordem dos aspectos
 consul kv put config/currency-api/resilience4j.retry.retry-aspect-order "100"
 consul kv put config/currency-api/resilience4j.circuitbreaker.circuit-breaker-aspect-order "101"
 
+REM ===== auth-api =====
+consul kv put config/auth-api/server.port "8200"
+consul kv put config/auth-api/spring.datasource.url "jdbc:postgresql://localhost/db_user"
+consul kv put config/auth-api/spring.datasource.username "postgres"
+consul kv put config/auth-api/spring.datasource.password "postgres"
+
 echo.
 echo Consul iniciado e configuracoes carregadas!
 pause
